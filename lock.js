@@ -1,18 +1,23 @@
 (function() {
-	window.Lock = function() {};
-
-	Lock.prototype.init = function() {
-		this.initDom();
+	window.Lock = function() {
 		this.path = []; //解锁路径
 		this.cachePath = []; //临时存储路径
 		this.startDraw = false; //是否开始绘制解锁图案
+		this.r = 0; //半径
+		this.pos = []; //各个圆心的位置
+
+	};
+
+	//初始化
+	Lock.prototype.init = function() {
+		this.initDom();		
 		this.canvas = document.getElementById('canvas');
 		this.ctx = this.canvas.getContext('2d');
 		this.createGraph();
 		this.addEvent();
 	};
 
-	//初始化绘图界面
+	//初始化界面
 	Lock.prototype.initDom = function() {
 		var container = document.getElementById('container');
 		var htmlStr = '<canvas id="canvas" width="300" height="300"></canvas>';
@@ -21,7 +26,7 @@
 			'<label for="checkLock"><input type="radio" id="checkLock" value="checkLock" name="lock">验证密码</label>';
 		container.innerHTML = htmlStr;
 	}
-
+	//创建解锁图形面板
 	Lock.prototype.createGraph = function() {
 		this.r = this.ctx.canvas.width / 12;
 		var r = this.r;
@@ -55,8 +60,6 @@
 			if (self.cachePath.length == 0) {
 				self.showTip("请输入手势密码");
 			}
-
-
 			var touchPos = self.getPosition(e);
 			for (var i = 0; i < 9; i++) {
 				if (Math.abs(touchPos.x - self.pos[i].x) < self.r && Math.abs(touchPos.y - self.pos[i].y) < self.r) {
@@ -82,6 +85,7 @@
 				for (var i = 0; i < self.pos.length; i++) {
 					if (Math.abs(touchPos.x - self.pos[i].x) < self.r && Math.abs(touchPos.y - self.pos[i].y) < self.r) {
 						lastPos = self.path[pathLen - 1];
+						//保证在短暂频繁触发的move事件中不加入重复的当前点
 						if (self.pos[i].index != lastPos.index) {
 							self.path.push({
 								x: self.pos[i].x,
@@ -100,9 +104,11 @@
 			if (self.path.length < 5) {
 				self.showTip("密码太短，至少需要5个点");
 			} else {
+				//验证密码模式
 				if (checkLock) {
 					self.checkLock();
 				} else {
+					//设置密码模式
 					self.setLock();
 				}
 
@@ -113,7 +119,11 @@
 
 		document.getElementById("checkLock").addEventListener('click',function(){
 			self.showTip("验证密码");
-		})
+		});
+		document.getElementById("setLock").addEventListener('click',function(){
+			self.clear();
+			self.showTip("请输入手势密码");
+		});
 	};
 
 	//画圆
@@ -127,7 +137,7 @@
 		ctx.fill();
 	};
 
-	//每一次move都重新绘制；将被选中的圆变成黄色
+	//每一次move都重新绘制；并将被选中的圆变成黄色
 	Lock.prototype.drawActive = function() {
 		this.clear();
 		for (var i = 0; i < this.path.length; i++) {
@@ -150,6 +160,7 @@
 		this.ctx.closePath();
 	}
 
+	//获取手指在解锁区域内的位置
 	Lock.prototype.getPosition = function(e) {
 		var area = e.currentTarget.getBoundingClientRect();
 		var touchPos = {
@@ -159,6 +170,7 @@
 		return touchPos;
 	};
 
+	//设置密码
 	Lock.prototype.setLock = function() {
 		var path = this.path;
 		var cachePath = this.cachePath;
@@ -186,6 +198,7 @@
 		}
 	};
 
+	//检查手势密码
 	Lock.prototype.checkLock = function() {
 		var path = this.path;
 		var realPath = JSON.parse(window.localStorage.getItem('path'));
@@ -200,12 +213,13 @@
 
 	}
 
-
+	//显示提示语句
 	Lock.prototype.showTip = function(content) {
 		var tip = document.getElementById("tip");
 		tip.innerText = content;
 	}
 
+	//清空解锁面板
 	Lock.prototype.clear = function(){
 		this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 		this.createGraph();
